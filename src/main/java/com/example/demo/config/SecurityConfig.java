@@ -36,6 +36,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf().disable()
                 .authorizeHttpRequests()
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-ui.html"
+                ).permitAll()
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/tasks/assigned", "/tasks/*/comments", "/tasks/*/status/user").hasRole("USER")
                 .requestMatchers("/tasks/**").hasRole("ADMIN")

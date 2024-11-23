@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  app:
+    image: openjdk:21-jdk-slim
+    container_name: task-management-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/demo_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-admin}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:17
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: demo_db
+      POSTGRES_USER: ${DB_USERNAME:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

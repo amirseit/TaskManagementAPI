@@ -1,14 +1,17 @@
 package com.example.demo.controllers;
 
-import com.example.demo.dto.CommentRequestDTO;
-import com.example.demo.dto.CommentResponseDTO;
-import com.example.demo.dto.TaskRequestDTO;
-import com.example.demo.dto.TaskResponseDTO;
+import com.example.demo.dto.*;
 import com.example.demo.entities.*;
 import com.example.demo.exceptions.*;
 import com.example.demo.services.TaskService;
 import com.example.demo.repositories.UserRepository;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +25,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/tasks")
+@SecurityRequirement(name = "bearerAuth")
 public class TaskController {
 
     @Autowired
@@ -37,6 +41,16 @@ public class TaskController {
      */
     @GetMapping("/assigned")
     @PreAuthorize("hasRole('ROLE_USER')")
+    @Operation(
+            summary = "Get tasks assigned to the logged-in user",
+            description = "Retrieve all tasks that are currently assigned to the logged-in user.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Tasks retrieved successfully",
+                            content = @Content(schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "User not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public List<TaskResponseDTO> getAssignedTasks(Principal principal) {
         // Get the logged-in user
         User loggedInUser = userRepository.findByEmail(principal.getName())
@@ -51,6 +65,21 @@ public class TaskController {
      */
     @PostMapping("/{id}/comments")
     @PreAuthorize("hasRole('ROLE_USER')")
+    @Operation(
+            summary = "Add a comment to a task",
+            description = "Allows the logged-in user to add a comment to a task assigned to them.",
+            parameters = @Parameter(name = "id", description = "ID of the task to comment on", required = true),
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Comment details",
+                    content = @Content(schema = @Schema(implementation = CommentRequestDTO.class))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Comment added successfully",
+                            content = @Content(schema = @Schema(implementation = CommentResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task or User not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public CommentResponseDTO addCommentToTask(@PathVariable Long id,
                                                @RequestBody @Valid CommentRequestDTO request,
                                                Principal principal) {
@@ -68,6 +97,17 @@ public class TaskController {
      */
     @GetMapping("/{id}/comments")
     @PreAuthorize("hasRole('ROLE_USER')")
+    @Operation(
+            summary = "Get all comments for a task",
+            description = "Retrieve all comments associated with a specific task.",
+            parameters = @Parameter(name = "id", description = "ID of the task", required = true),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Comments retrieved successfully",
+                            content = @Content(schema = @Schema(implementation = CommentResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task or User not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public List<CommentResponseDTO> getCommentsForTask(@PathVariable Long id, Principal principal) {
         User loggedInUser = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -79,6 +119,21 @@ public class TaskController {
      */
     @PatchMapping("/{id}/status/user")
     @PreAuthorize("hasRole('ROLE_USER')")
+    @Operation(
+            summary = "Update task status for the logged-in user",
+            description = "Allows the logged-in user to update the status of a task assigned to them.",
+            parameters = @Parameter(name = "id", description = "ID of the task", required = true),
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "New task status",
+                    content = @Content(schema = @Schema(example = "{\"status\": \"IN_PROGRESS\"}"))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task status updated successfully",
+                            content = @Content(schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task or User not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public TaskResponseDTO updateTaskStatusForUser(@PathVariable Long id,
                                                    @RequestBody Map<String, String> request,
                                                    Principal principal) {
@@ -101,6 +156,18 @@ public class TaskController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Create a new task",
+            description = "Allows an admin to create a new task.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Task details",
+                    content = @Content(schema = @Schema(implementation = TaskRequestDTO.class))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task created successfully",
+                            content = @Content(schema = @Schema(implementation = TaskResponseDTO.class)))
+            }
+    )
     public TaskResponseDTO createTask(@RequestBody @Valid TaskRequestDTO request, Principal principal) {
         User author = userRepository.findByEmail(principal.getName())
                 .orElseThrow(() -> new AuthorNotFoundException("Author not found"));
@@ -114,6 +181,21 @@ public class TaskController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Update a task",
+            description = "Allows an admin to update an existing task.",
+            parameters = @Parameter(name = "id", description = "ID of the task to update", required = true),
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Updated task details",
+                    content = @Content(schema = @Schema(implementation = TaskRequestDTO.class))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task updated successfully",
+                            content = @Content(schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "404", description = "Task not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public TaskResponseDTO updateTask(@PathVariable Long id, @RequestBody @Valid TaskRequestDTO request) {
         Task updatedTask = taskService.updateTask(id, request);
         if (updatedTask == null) {
@@ -127,6 +209,16 @@ public class TaskController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Delete a task",
+            description = "Allows an admin to delete an existing task.",
+            parameters = @Parameter(name = "id", description = "ID of the task to delete", required = true),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task deleted successfully"),
+                    @ApiResponse(responseCode = "404", description = "Task not found",
+                            content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
+            }
+    )
     public void deleteTask(@PathVariable Long id) {
         try {
             taskService.deleteTask(id);
@@ -141,6 +233,23 @@ public class TaskController {
      */
     @PatchMapping("/{id}/status/admin")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Update the status of any task",
+            description = "Allows an admin to update the status of a task. The task ID and new status must be provided.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the task to update", required = true),
+            },
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Request body containing the new status for the task",
+                    required = true,
+                    content = @Content(schema = @Schema(example = "{ \"status\": \"IN_PROGRESS\" }"))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task status updated successfully", content = @Content(schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid task status provided"),
+                    @ApiResponse(responseCode = "404", description = "Task not found")
+            }
+    )
     public TaskResponseDTO updateTaskStatusForAdmin(@PathVariable Long id,
                                                     @RequestBody Map<String, String> request) {
         // Validate that the status exists in TaskStatus enum
@@ -164,6 +273,23 @@ public class TaskController {
      */
     @PatchMapping("/{id}/priority")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Update the priority of a task",
+            description = "Allows an admin to update the priority of a task. The task ID and new priority must be provided.",
+            parameters = {
+                    @Parameter(name = "id", description = "ID of the task to update", required = true),
+            },
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Request body containing the new priority for the task",
+                    required = true,
+                    content = @Content(schema = @Schema(example = "{ \"priority\": \"HIGH\" }"))
+            ),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Task priority updated successfully", content = @Content(schema = @Schema(implementation = TaskResponseDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid task priority provided"),
+                    @ApiResponse(responseCode = "404", description = "Task not found")
+            }
+    )
     public TaskResponseDTO updateTaskPriority(@PathVariable Long id,
                                               @RequestBody Map<String, String> request) {
         try {
@@ -188,6 +314,21 @@ public class TaskController {
      */
     @GetMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @Operation(
+            summary = "Retrieve all tasks with filtering and pagination",
+            description = "Allows an admin to retrieve all tasks with optional filters (author email, assignee email, status, and priority). Results can be paginated.",
+            parameters = {
+                    @Parameter(name = "authorEmail", description = "Email of the task author (optional)", required = false),
+                    @Parameter(name = "assigneeEmail", description = "Email of the task assignee (optional)", required = false),
+                    @Parameter(name = "status", description = "Status of the task (optional)", required = false),
+                    @Parameter(name = "priority", description = "Priority of the task (optional)", required = false),
+                    @Parameter(name = "pageable", description = "Pagination information (e.g., page number, size, sort)", required = false)
+            },
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Tasks retrieved successfully", content = @Content(schema = @Schema(implementation = Page.class))),
+                    @ApiResponse(responseCode = "400", description = "Invalid filter parameters")
+            }
+    )
     public Page<TaskResponseDTO> getAllTasks(
             @RequestParam(required = false) String authorEmail,
             @RequestParam(required = false) String assigneeEmail,

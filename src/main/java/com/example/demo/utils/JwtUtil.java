@@ -17,7 +17,9 @@ import java.util.function.Function;
 public class JwtUtil {
 
     // Get the secret key from the environment variable SECURE_SECRET_KEY
-    private final String SECRET = System.getenv("SECURE_SECRET_KEY");
+    private final String SECRET = System.getenv("SECURE_SECRET_KEY") != null
+            ? System.getenv("SECURE_SECRET_KEY")
+            : "sMmHaTcmQM7cNX7p6+p7qCWAF5bYBgxFp0rK5M1TzrI="; // Default key for local development
     private final Key SECRET_KEY = new SecretKeySpec(
             Base64.getDecoder().decode(SECRET),
             SignatureAlgorithm.HS256.getJcaName()
